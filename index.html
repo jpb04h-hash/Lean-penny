@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Round 1 – Penny Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 16px;
+      background: #f4f4f4;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    #controls {
+      margin-bottom: 12px;
+    }
+    #controls label {
+      margin-left: 12px;
+      font-size: 14px;
+    }
+    #status {
+      margin: 8px 0 16px 0;
+      font-size: 14px;
+    }
+    #lanes {
+      display: flex;
+      gap: 8px;
+      position: relative;
+      height: 220px;
+    }
+    .lane {
+      flex: 1;
+      background: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+    .lane-title {
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .lane-status {
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .wip-label {
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+    .wip-stack {
+      position: relative;
+      width: 60px;
+      height: 140px;
+      border: 1px dashed #ddd;
+      border-radius: 4px;
+      background: #fafafa;
+    }
+    .penny {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #e2b48a, #8a4f2a);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+      position: absolute;
+    }
+    .batch-stack {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      pointer-events: none;
+    }
+    .batch-moving {
+      transition: transform 10s linear;
+      animation: wobble 0.6s infinite ease-in-out;
+    }
+    .countdown {
+      position: absolute;
+      top: -18px;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      text-align: center;
+      font-size: 11px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 1px 4px;
+      border-radius: 8px;
+    }
+    @keyframes wobble {
+      0%   { transform: translateX(0) rotate(0deg); }
+      25%  { transform: translateX(0) rotate(-2deg); }
+      50%  { transform: translateX(0) rotate(2deg); }
+      75%  { transform: translateX(0) rotate(-1deg); }
+      100% { transform: translateX(0) rotate(0deg); }
+    }
+    #log {
+      margin-top: 12px;
+      font-size: 12px;
+      max-height: 160px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Round 1 – Batch 30, 10s Walk</h1>
+
+<div id="controls">
+  <button id="startBtn">Start Simulation</button>
+  <label>
+    <input type="checkbox" id="visualToggle" checked>
+    Visual mode
+  </label>
+</div>
+
+<div id="status">
+  <span id="timeLabel">Time: 0.0s</span> |
+  <span id="finishedLabel">Finished: 0</span>
+</div>
+
+<div id="lanes">
+  <div class="lane" id="laneA">
+    <div class="lane-title">Station A</div>
+    <div class="lane-status" id="statusA">Idle</div>
+    <div class="wip-label">WIP</div>
+    <div class="wip-stack" id="wipA"></div>
+  </div>
+  <div class="lane" id="laneB">
+    <div class="lane-title">Station B</div>
+    <div class="lane-status" id="statusB">Idle</div>
+    <div class="wip-label">WIP</div>
+    <div class="wip-stack" id="wipB"></div>
+  </div>
+  <div class="lane" id="laneC">
+    <div class="lane-title">Station C</div>
+    <div class="lane-status" id="statusC">Idle</div>
+    <div class="wip-label">WIP</div>
+    <div class="wip-stack" id="wipC"></div>
+  </div>
+  <div class="lane" id="laneD">
+    <div class="lane-title">Station D</div>
+    <div class="lane-status" id="statusD">Idle</div>
+    <div class="wip-label">WIP</div>
+    <div class="wip-stack" id="wipD"></div>
+  </div>
+  <div class="lane" id="laneFG">
+    <div class="lane-title">Finished Goods</div>
+    <div class="lane-status" id="statusFG">—</div>
+    <div class="wip-label">Output</div>
+    <div class="wip-stack" id="wipFG"></div>
+  </div>
+</div>
+
+<div id="log"></div>
+
+<script>
+const BATCH_SIZE = 30;
+const WORK_TIME = 30;   // seconds
+const WALK_TIME = 10;   // seconds
+const ROUND_LENGTH = 240; // seconds
+const TICK = 100; // ms
+
+class Station {
+  constructor(name, idx) {
+    this.name = name;
+    this.idx = idx;
+    this.queue = 0;
+    this.state = "idle"; // idle, working, walking
+    this.timeRemaining = 0;
+    this.walkingBatch = null; // visual batch element
+    this.walkStartTime = 0;
+  }
+
+  startBatch() {
+    this.state = "working";
+    this.timeRemaining = WORK_TIME;
+  }
+
+  startWalk(currentTime) {
+    this.state = "walking";
+    this.timeRemaining = WALK_TIME;
+    this.walkStartTime = currentTime;
+  }
+
+  tick(dt) {
+    if (this.timeRemaining > 0) {
+      this.timeRemaining -= dt;
+      if (this.timeRemaining < 0) this.timeRemaining = 0;
+    }
+  }
+}
+
+const stations = [
+  new Station("A", 0),
+  new Station("B", 1),
+  new Station("C", 2),
+  new Station("D", 3)
+];
+
+let finished = 0;
+let time = 0;
+let running = false;
+let visualMode = true;
+
+const timeLabel = document.getElementById("timeLabel");
+const finishedLabel = document.getElementById("finishedLabel");
+const logDiv = document.getElementById("log");
+
+const laneEls = [
+  document.getElementById("laneA"),
+  document.getElementById("laneB"),
+  document.getElementById("laneC"),
+  document.getElementById("laneD"),
+  document.getElementById("laneFG")
+];
+
+const statusEls = {
+  A: document.getElementById("statusA"),
+  B: document.getElementById("statusB"),
+  C: document.getElementById("statusC"),
+  D: document.getElementById("statusD"),
+  FG: document.getElementById("statusFG")
+};
+
+const wipEls = {
+  A: document.getElementById("wipA"),
+  B: document.getElementById("wipB"),
+  C: document.getElementById("wipC"),
+  D: document.getElementById("wipD"),
+  FG: document.getElementById("wipFG")
+};
+
+document.getElementById("visualToggle").addEventListener("change", (e) => {
+  visualMode = e.target.checked;
+  document.getElementById("lanes").style.opacity = visualMode ? "1" : "0.3";
+});
+
+document.getElementById("startBtn").addEventListener("click", () => {
+  resetSimulation();
+  running = true;
+  log("Simulation started");
+  simulateStep();
+});
+
+function resetSimulation() {
+  time = 0;
+  finished = 0;
+  stations.forEach(s => {
+    s.queue = 0;
+    s.state = "idle";
+    s.timeRemaining = 0;
+    s.walkingBatch = null;
+  });
+  clearVisuals();
+  updateUI();
+}
+
+function clearVisuals() {
+  Object.values(wipEls).forEach(el => el.innerHTML = "");
+}
+
+function log(msg) {
+  const line = document.createElement("div");
+  line.textContent = `[${time.toFixed(1)}s] ${msg}`;
+  logDiv.appendChild(line);
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+function createBatchStackElement() {
+  const batch = document.createElement("div");
+  batch.className = "batch-stack";
+  // build 30 pennies stacked
+  for (let i = 0; i < BATCH_SIZE; i++) {
+    const p = document.createElement("div");
+    p.className = "penny";
+    const xOffset = 20 + (Math.random() * 4 - 2);
+    const yOffset = 40 - i * 0.8;
+    p.style.left = xOffset + "px";
+    p.style.top = yOffset + "px";
+    p.style.transform = `rotate(${(Math.random() * 10 - 5)}deg)`;
+    batch.appendChild(p);
+  }
+  const countdown = document.createElement("div");
+  countdown.className = "countdown";
+  countdown.textContent = "";
+  batch.appendChild(countdown);
+  return batch;
+}
+
+function placeBatchAtStation(batchEl, stationIdx) {
+  const lane = laneEls[stationIdx];
+  const rect = lane.getBoundingClientRect();
+  const lanesRect = laneEls[0].parentElement.getBoundingClientRect();
+  const x = rect.left - lanesRect.left + 10;
+  const y = rect.top - lanesRect.top + 80;
+  batchEl.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+function animateWalk(station, fromIdx, toIdx) {
+  if (!visualMode) return;
+  const batch = createBatchStackElement();
+  station.walkingBatch = batch;
+  const lanesRect = laneEls[0].parentElement.getBoundingClientRect();
+  const fromRect = laneEls[fromIdx].getBoundingClientRect();
+  const toRect = laneEls[toIdx].getBoundingClientRect();
+
+  const startX = fromRect.left - lanesRect.left + 10;
+  const startY = fromRect.top - lanesRect.top + 80;
+  const endX = toRect.left - lanesRect.left + 10;
+  const endY = toRect.top - lanesRect.top + 80;
+
+  batch.style.transform = `translate(${startX}px, ${startY}px)`;
+  document.body.appendChild(batch);
+
+  // force layout
+  void batch.offsetWidth;
+
+  batch.classList.add("batch-moving");
+  batch.style.transform = `translate(${endX}px, ${endY}px)`;
+}
+
+function removeWalkingBatch(station) {
+  if (station.walkingBatch) {
+    station.walkingBatch.remove();
+    station.walkingBatch = null;
+  }
+}
+
+function updateWalkingCountdowns() {
+  if (!visualMode) return;
+  stations.forEach(station => {
+    if (station.state === "walking" && station.walkingBatch) {
+      const countdownEl = station.walkingBatch.querySelector(".countdown");
+      const remaining = station.timeRemaining;
+      countdownEl.textContent = remaining.toFixed(1) + "s";
+    }
+  });
+}
+
+function addWipBatch(stationName) {
+  if (!visualMode) return;
+  const wipEl = wipEls[stationName];
+  const batch = document.createElement("div");
+  batch.className = "batch-stack";
+  for (let i = 0; i < BATCH_SIZE; i++) {
+    const p = document.createElement("div");
+    p.className = "penny";
+    const xOffset = 20 + (Math.random() * 4 - 2);
+    const yOffset = 120 - i * 1.2;
+    p.style.left = xOffset + "px";
+    p.style.top = yOffset + "px";
+    p.style.transform = `rotate(${(Math.random() * 10 - 5)}deg)`;
+    batch.appendChild(p);
+  }
+  wipEl.appendChild(batch);
+}
+
+function removeWipBatch(stationName) {
+  if (!visualMode) return;
+  const wipEl = wipEls[stationName];
+  if (wipEl.lastElementChild) {
+    wipEl.removeChild(wipEl.lastElementChild);
+  }
+}
+
+function simulateStep() {
+  if (!running) return;
+
+  const dt = TICK / 1000;
+  time += dt;
+
+  // Station A always pushes batches
+  const A = stations[0];
+  if (A.state === "idle") {
+    A.startBatch();
+    log("Station A started batch");
+  }
+
+  // Tick stations
+  stations.forEach(s => s.tick(dt));
+
+  // Handle transitions
+  for (let i = 0; i < stations.length; i++) {
+    const s = stations[i];
+
+    if (s.state === "working" && s.timeRemaining === 0) {
+      // start walk
+      s.startWalk(time);
+      log(`Station ${s.name} started walking batch`);
+      animateWalk(s, i, i + 1);
+    }
+
+    if (s.state === "walking" && s.timeRemaining === 0) {
+      // arrive at next station or FG
+      removeWalkingBatch(s);
+      if (i < stations.length - 1) {
+        stations[i + 1].queue += BATCH_SIZE;
+        addWipBatch(stations[i + 1].name);
+        log(`Batch arrived at Station ${stations[i + 1].name}`);
+      } else {
+        finished += BATCH_SIZE;
+        addWipBatch("FG");
+        log("Batch finished (30 pennies)");
+      }
+      s.state = "idle";
+    }
+
+    if (s.state === "idle" && s.queue >= BATCH_SIZE) {
+      s.queue -= BATCH_SIZE;
+      removeWipBatch(s.name);
+      s.startBatch();
+      log(`Station ${s.name} started batch from WIP`);
+    }
+  }
+
+  updateUI();
+
+  if (time < ROUND_LENGTH) {
+    setTimeout(simulateStep, TICK);
+  } else {
+    running = false;
+    log("Round complete");
+  }
+}
+
+function updateUI() {
+  timeLabel.textContent = "Time: " + time.toFixed(1) + "s";
+  finishedLabel.textContent = "Finished: " + finished;
+
+  const names = ["A", "B", "C", "D"];
+  stations.forEach((s, idx) => {
+    let text = "";
+    if (s.state === "idle") text = "Idle";
+    if (s.state === "working") text = `Working (${s.timeRemaining.toFixed(1)}s)`;
+    if (s.state === "walking") text = `Walking (${s.timeRemaining.toFixed(1)}s)`;
+    statusEls[names[idx]].textContent = text;
+  });
+
+  statusEls.FG.textContent = finished > 0 ? "Output flowing" : "—";
+
+  updateWalkingCountdowns();
+}
+</script>
+
+</body>
+</html>
