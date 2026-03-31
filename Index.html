@@ -4,158 +4,508 @@
   <meta charset="UTF-8">
   <title>Round 1 – Penny Game</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: Arial, sans-serif;
-      padding: 16px;
-      background: #f4f4f4;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      padding: 24px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
     }
+
     h1 {
-      margin-top: 0;
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #f59e0b, #d97706);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
     }
-    #controls {
-      margin-bottom: 12px;
-    }
-    #controls label {
-      margin-left: 12px;
-      font-size: 14px;
-    }
-    #status {
-      margin: 8px 0 16px 0;
-      font-size: 14px;
-    }
-    #lanes {
-      display: flex;
-      gap: 8px;
-      position: relative;
-      height: 220px;
-    }
-    .lane {
-      flex: 1;
-      background: #ffffff;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      padding: 4px;
-      position: relative;
-      overflow: hidden;
-    }
-    .lane-title {
-      font-weight: bold;
+
+    .subtitle {
       font-size: 13px;
-      margin-bottom: 4px;
+      color: #64748b;
+      margin-bottom: 20px;
     }
-    .lane-status {
-      font-size: 12px;
-      margin-bottom: 4px;
+
+    #controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
     }
-    .wip-label {
+
+    #startBtn {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #0f172a;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+    }
+
+    #startBtn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.5);
+    }
+
+    #startBtn:active {
+      transform: translateY(0);
+    }
+
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #94a3b8;
+      cursor: pointer;
+    }
+
+    .toggle-label input {
+      accent-color: #f59e0b;
+    }
+
+    #status {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    .stat-box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 10px 20px;
+      min-width: 140px;
+    }
+
+    .stat-label {
       font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
       margin-bottom: 2px;
     }
+
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .stat-value.gold {
+      color: #f59e0b;
+    }
+
+    /* Round progress bar */
+    #roundProgress {
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    #roundProgressBar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #f59e0b, #ef4444);
+      border-radius: 2px;
+      transition: width 0.1s linear;
+    }
+
+    /* Lanes */
+    #lanes {
+      display: flex;
+      gap: 10px;
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .lane {
+      flex: 1;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 12px;
+      position: relative;
+      min-height: 260px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .lane.active {
+      border-color: rgba(245, 158, 11, 0.3);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.08);
+    }
+
+    .lane.finished-lane {
+      border-color: rgba(34, 197, 94, 0.2);
+    }
+
+    .lane-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .lane-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+
+    .lane-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-idle {
+      background: rgba(100, 116, 139, 0.2);
+      color: #64748b;
+    }
+
+    .badge-working {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+      animation: pulse-badge 1.5s infinite;
+    }
+
+    .badge-walking {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
+      animation: pulse-badge 1s infinite;
+    }
+
+    @keyframes pulse-badge {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    /* Work progress bar inside lane */
+    .work-progress {
+      height: 3px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    .work-progress-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      transition: width 0.1s linear;
+    }
+
+    .work-progress-bar.working {
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+
+    .work-progress-bar.walking {
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+
+    .lane-timer {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 8px;
+      min-height: 28px;
+      color: #475569;
+    }
+
+    .lane-timer.active-timer {
+      color: #f59e0b;
+    }
+
+    .lane-timer.walk-timer {
+      color: #3b82f6;
+    }
+
+    .wip-section {
+      margin-top: 8px;
+    }
+
+    .wip-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #475569;
+      margin-bottom: 6px;
+    }
+
     .wip-stack {
       position: relative;
-      width: 60px;
-      height: 140px;
-      border: 1px dashed #ddd;
-      border-radius: 4px;
-      background: #fafafa;
+      width: 100%;
+      height: 120px;
+      border: 1px dashed rgba(255,255,255,0.06);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.15);
+      overflow: hidden;
     }
+
+    /* Pennies */
     .penny {
-      width: 16px;
-      height: 16px;
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #e2b48a, #8a4f2a);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.4);
       position: absolute;
+      background: radial-gradient(circle at 35% 35%, #fcd34d, #b45309);
+      box-shadow:
+        0 1px 2px rgba(0,0,0,0.5),
+        inset 0 1px 1px rgba(255,255,255,0.3);
     }
+
+    .penny::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(180, 83, 9, 0.4);
+    }
+
+    /* Walking batch */
     .batch-stack {
       position: absolute;
       width: 60px;
       height: 60px;
       pointer-events: none;
+      z-index: 100;
     }
+
     .batch-moving {
       transition: transform 10s linear;
-      animation: wobble 0.6s infinite ease-in-out;
     }
+
+    .batch-glow {
+      position: absolute;
+      top: 10px;
+      left: 5px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.3) 0%, transparent 70%);
+      animation: glow-pulse 1s infinite;
+    }
+
+    @keyframes glow-pulse {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+
     .countdown {
       position: absolute;
-      top: -18px;
-      left: 0;
-      right: 0;
-      margin: 0 auto;
+      top: -22px;
+      left: 50%;
+      transform: translateX(-50%);
       text-align: center;
       font-size: 11px;
-      background: rgba(0,0,0,0.7);
+      font-weight: 600;
+      background: rgba(59, 130, 246, 0.9);
       color: #fff;
-      padding: 1px 4px;
-      border-radius: 8px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
     }
-    @keyframes wobble {
-      0%   { transform: translateX(0) rotate(0deg); }
-      25%  { transform: translateX(0) rotate(-2deg); }
-      50%  { transform: translateX(0) rotate(2deg); }
-      75%  { transform: translateX(0) rotate(-1deg); }
-      100% { transform: translateX(0) rotate(0deg); }
+
+    /* Finished goods special */
+    .fg-count {
+      font-size: 36px;
+      font-weight: 800;
+      color: #22c55e;
+      text-align: center;
+      margin-top: 20px;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 30px rgba(34, 197, 94, 0.3);
     }
+
+    /* Connector arrows between lanes */
+    .connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #334155;
+      font-size: 18px;
+      flex-shrink: 0;
+      width: 20px;
+    }
+
+    /* Log */
     #log {
-      margin-top: 12px;
       font-size: 12px;
-      max-height: 160px;
+      max-height: 140px;
       overflow-y: auto;
-      background: #fff;
-      border: 1px solid #ccc;
-      padding: 6px;
-      border-radius: 4px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      line-height: 1.6;
+    }
+
+    #log::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #log::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #log::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+    }
+
+    .log-line {
+      color: #64748b;
+    }
+
+    .log-line .log-time {
+      color: #475569;
+    }
+
+    .log-line.log-finish {
+      color: #22c55e;
+    }
+
+    .log-line.log-walk {
+      color: #3b82f6;
+    }
+
+    .log-line.log-work {
+      color: #f59e0b;
+    }
+
+    /* Celebration effect */
+    @keyframes celebrate {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .celebrate {
+      animation: celebrate 0.3s ease-out;
     }
   </style>
 </head>
 <body>
 
-<h1>Round 1 – Batch 30, 10s Walk</h1>
+<h1>Penny Game Simulation</h1>
+<div class="subtitle">Round 1 &mdash; Batch Size: 30 &bull; Work: 30s &bull; Walk: 10s &bull; Duration: 4min</div>
 
 <div id="controls">
   <button id="startBtn">Start Simulation</button>
-  <label>
+  <label class="toggle-label">
     <input type="checkbox" id="visualToggle" checked>
     Visual mode
   </label>
 </div>
 
 <div id="status">
-  <span id="timeLabel">Time: 0.0s</span> |
-  <span id="finishedLabel">Finished: 0</span>
+  <div class="stat-box">
+    <div class="stat-label">Elapsed</div>
+    <div class="stat-value" id="timeLabel">0.0s</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Finished Pennies</div>
+    <div class="stat-value gold" id="finishedLabel">0</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-label">Batches Complete</div>
+    <div class="stat-value" id="batchLabel">0</div>
+  </div>
 </div>
+
+<div id="roundProgress"><div id="roundProgressBar"></div></div>
 
 <div id="lanes">
   <div class="lane" id="laneA">
-    <div class="lane-title">Station A</div>
-    <div class="lane-status" id="statusA">Idle</div>
-    <div class="wip-label">WIP</div>
-    <div class="wip-stack" id="wipA"></div>
+    <div class="lane-header">
+      <div class="lane-title">Station A</div>
+      <span class="lane-badge badge-idle" id="badgeA">Idle</span>
+    </div>
+    <div class="work-progress"><div class="work-progress-bar" id="progressA"></div></div>
+    <div class="lane-timer" id="timerA">&mdash;</div>
+    <div class="wip-section">
+      <div class="wip-label">WIP Queue</div>
+      <div class="wip-stack" id="wipA"></div>
+    </div>
   </div>
+
+  <div class="connector" id="arrow0">&rsaquo;</div>
+
   <div class="lane" id="laneB">
-    <div class="lane-title">Station B</div>
-    <div class="lane-status" id="statusB">Idle</div>
-    <div class="wip-label">WIP</div>
-    <div class="wip-stack" id="wipB"></div>
+    <div class="lane-header">
+      <div class="lane-title">Station B</div>
+      <span class="lane-badge badge-idle" id="badgeB">Idle</span>
+    </div>
+    <div class="work-progress"><div class="work-progress-bar" id="progressB"></div></div>
+    <div class="lane-timer" id="timerB">&mdash;</div>
+    <div class="wip-section">
+      <div class="wip-label">WIP Queue</div>
+      <div class="wip-stack" id="wipB"></div>
+    </div>
   </div>
+
+  <div class="connector" id="arrow1">&rsaquo;</div>
+
   <div class="lane" id="laneC">
-    <div class="lane-title">Station C</div>
-    <div class="lane-status" id="statusC">Idle</div>
-    <div class="wip-label">WIP</div>
-    <div class="wip-stack" id="wipC"></div>
+    <div class="lane-header">
+      <div class="lane-title">Station C</div>
+      <span class="lane-badge badge-idle" id="badgeC">Idle</span>
+    </div>
+    <div class="work-progress"><div class="work-progress-bar" id="progressC"></div></div>
+    <div class="lane-timer" id="timerC">&mdash;</div>
+    <div class="wip-section">
+      <div class="wip-label">WIP Queue</div>
+      <div class="wip-stack" id="wipC"></div>
+    </div>
   </div>
+
+  <div class="connector" id="arrow2">&rsaquo;</div>
+
   <div class="lane" id="laneD">
-    <div class="lane-title">Station D</div>
-    <div class="lane-status" id="statusD">Idle</div>
-    <div class="wip-label">WIP</div>
-    <div class="wip-stack" id="wipD"></div>
+    <div class="lane-header">
+      <div class="lane-title">Station D</div>
+      <span class="lane-badge badge-idle" id="badgeD">Idle</span>
+    </div>
+    <div class="work-progress"><div class="work-progress-bar" id="progressD"></div></div>
+    <div class="lane-timer" id="timerD">&mdash;</div>
+    <div class="wip-section">
+      <div class="wip-label">WIP Queue</div>
+      <div class="wip-stack" id="wipD"></div>
+    </div>
   </div>
-  <div class="lane" id="laneFG">
-    <div class="lane-title">Finished Goods</div>
-    <div class="lane-status" id="statusFG">—</div>
-    <div class="wip-label">Output</div>
-    <div class="wip-stack" id="wipFG"></div>
+
+  <div class="connector" id="arrow3">&rsaquo;</div>
+
+  <div class="lane finished-lane" id="laneFG">
+    <div class="lane-header">
+      <div class="lane-title">Finished Goods</div>
+      <span class="lane-badge badge-idle" id="badgeFG">&mdash;</span>
+    </div>
+    <div class="fg-count" id="fgCount">0</div>
+    <div class="wip-section">
+      <div class="wip-label">Output</div>
+      <div class="wip-stack" id="wipFG"></div>
+    </div>
   </div>
 </div>
 
@@ -163,19 +513,19 @@
 
 <script>
 const BATCH_SIZE = 30;
-const WORK_TIME = 30;   // seconds
-const WALK_TIME = 10;   // seconds
-const ROUND_LENGTH = 240; // seconds
-const TICK = 100; // ms
+const WORK_TIME = 30;
+const WALK_TIME = 10;
+const ROUND_LENGTH = 240;
+const TICK = 100;
 
 class Station {
   constructor(name, idx) {
     this.name = name;
     this.idx = idx;
     this.queue = 0;
-    this.state = "idle"; // idle, working, walking
+    this.state = "idle";
     this.timeRemaining = 0;
-    this.walkingBatch = null; // visual batch element
+    this.walkingBatch = null;
     this.walkStartTime = 0;
   }
 
@@ -206,13 +556,17 @@ const stations = [
 ];
 
 let finished = 0;
+let batchesComplete = 0;
 let time = 0;
 let running = false;
 let visualMode = true;
 
 const timeLabel = document.getElementById("timeLabel");
 const finishedLabel = document.getElementById("finishedLabel");
+const batchLabel = document.getElementById("batchLabel");
 const logDiv = document.getElementById("log");
+const roundProgressBar = document.getElementById("roundProgressBar");
+const fgCount = document.getElementById("fgCount");
 
 const laneEls = [
   document.getElementById("laneA"),
@@ -222,12 +576,28 @@ const laneEls = [
   document.getElementById("laneFG")
 ];
 
-const statusEls = {
-  A: document.getElementById("statusA"),
-  B: document.getElementById("statusB"),
-  C: document.getElementById("statusC"),
-  D: document.getElementById("statusD"),
-  FG: document.getElementById("statusFG")
+const names = ["A", "B", "C", "D"];
+
+const badgeEls = {
+  A: document.getElementById("badgeA"),
+  B: document.getElementById("badgeB"),
+  C: document.getElementById("badgeC"),
+  D: document.getElementById("badgeD"),
+  FG: document.getElementById("badgeFG")
+};
+
+const timerEls = {
+  A: document.getElementById("timerA"),
+  B: document.getElementById("timerB"),
+  C: document.getElementById("timerC"),
+  D: document.getElementById("timerD")
+};
+
+const progressEls = {
+  A: document.getElementById("progressA"),
+  B: document.getElementById("progressB"),
+  C: document.getElementById("progressC"),
+  D: document.getElementById("progressD")
 };
 
 const wipEls = {
@@ -246,13 +616,14 @@ document.getElementById("visualToggle").addEventListener("change", (e) => {
 document.getElementById("startBtn").addEventListener("click", () => {
   resetSimulation();
   running = true;
-  log("Simulation started");
+  log("Simulation started", "log-work");
   simulateStep();
 });
 
 function resetSimulation() {
   time = 0;
   finished = 0;
+  batchesComplete = 0;
   stations.forEach(s => {
     s.queue = 0;
     s.state = "idle";
@@ -265,11 +636,13 @@ function resetSimulation() {
 
 function clearVisuals() {
   Object.values(wipEls).forEach(el => el.innerHTML = "");
+  logDiv.innerHTML = "";
 }
 
-function log(msg) {
+function log(msg, cls) {
   const line = document.createElement("div");
-  line.textContent = `[${time.toFixed(1)}s] ${msg}`;
+  line.className = "log-line " + (cls || "");
+  line.innerHTML = `<span class="log-time">[${time.toFixed(1)}s]</span> ${msg}`;
   logDiv.appendChild(line);
   logDiv.scrollTop = logDiv.scrollHeight;
 }
@@ -277,12 +650,14 @@ function log(msg) {
 function createBatchStackElement() {
   const batch = document.createElement("div");
   batch.className = "batch-stack";
-  // build 30 pennies stacked
+  const glow = document.createElement("div");
+  glow.className = "batch-glow";
+  batch.appendChild(glow);
   for (let i = 0; i < BATCH_SIZE; i++) {
     const p = document.createElement("div");
     p.className = "penny";
-    const xOffset = 20 + (Math.random() * 4 - 2);
-    const yOffset = 40 - i * 0.8;
+    const xOffset = 18 + (Math.random() * 6 - 3);
+    const yOffset = 42 - i * 0.9;
     p.style.left = xOffset + "px";
     p.style.top = yOffset + "px";
     p.style.transform = `rotate(${(Math.random() * 10 - 5)}deg)`;
@@ -293,15 +668,6 @@ function createBatchStackElement() {
   countdown.textContent = "";
   batch.appendChild(countdown);
   return batch;
-}
-
-function placeBatchAtStation(batchEl, stationIdx) {
-  const lane = laneEls[stationIdx];
-  const rect = lane.getBoundingClientRect();
-  const lanesRect = laneEls[0].parentElement.getBoundingClientRect();
-  const x = rect.left - lanesRect.left + 10;
-  const y = rect.top - lanesRect.top + 80;
-  batchEl.style.transform = `translate(${x}px, ${y}px)`;
 }
 
 function animateWalk(station, fromIdx, toIdx) {
@@ -320,7 +686,6 @@ function animateWalk(station, fromIdx, toIdx) {
   batch.style.transform = `translate(${startX}px, ${startY}px)`;
   document.body.appendChild(batch);
 
-  // force layout
   void batch.offsetWidth;
 
   batch.classList.add("batch-moving");
@@ -339,8 +704,7 @@ function updateWalkingCountdowns() {
   stations.forEach(station => {
     if (station.state === "walking" && station.walkingBatch) {
       const countdownEl = station.walkingBatch.querySelector(".countdown");
-      const remaining = station.timeRemaining;
-      countdownEl.textContent = remaining.toFixed(1) + "s";
+      countdownEl.textContent = station.timeRemaining.toFixed(1) + "s";
     }
   });
 }
@@ -350,11 +714,12 @@ function addWipBatch(stationName) {
   const wipEl = wipEls[stationName];
   const batch = document.createElement("div");
   batch.className = "batch-stack";
+  batch.style.position = "relative";
   for (let i = 0; i < BATCH_SIZE; i++) {
     const p = document.createElement("div");
     p.className = "penny";
-    const xOffset = 20 + (Math.random() * 4 - 2);
-    const yOffset = 120 - i * 1.2;
+    const xOffset = 18 + (Math.random() * 6 - 3);
+    const yOffset = 95 - i * 1.2;
     p.style.left = xOffset + "px";
     p.style.top = yOffset + "px";
     p.style.transform = `rotate(${(Math.random() * 10 - 5)}deg)`;
@@ -377,38 +742,37 @@ function simulateStep() {
   const dt = TICK / 1000;
   time += dt;
 
-  // Station A always pushes batches
   const A = stations[0];
   if (A.state === "idle") {
     A.startBatch();
-    log("Station A started batch");
+    log("Station A started batch", "log-work");
   }
 
-  // Tick stations
   stations.forEach(s => s.tick(dt));
 
-  // Handle transitions
   for (let i = 0; i < stations.length; i++) {
     const s = stations[i];
 
     if (s.state === "working" && s.timeRemaining === 0) {
-      // start walk
       s.startWalk(time);
-      log(`Station ${s.name} started walking batch`);
+      log(`Station ${s.name} walking batch to ${i < stations.length - 1 ? "Station " + names[i+1] : "Finished Goods"}`, "log-walk");
       animateWalk(s, i, i + 1);
     }
 
     if (s.state === "walking" && s.timeRemaining === 0) {
-      // arrive at next station or FG
       removeWalkingBatch(s);
       if (i < stations.length - 1) {
         stations[i + 1].queue += BATCH_SIZE;
         addWipBatch(stations[i + 1].name);
-        log(`Batch arrived at Station ${stations[i + 1].name}`);
+        log(`Batch arrived at Station ${stations[i + 1].name}`, "log-work");
       } else {
         finished += BATCH_SIZE;
+        batchesComplete++;
         addWipBatch("FG");
-        log("Batch finished (30 pennies)");
+        log(`Batch complete! ${BATCH_SIZE} pennies finished (total: ${finished})`, "log-finish");
+        fgCount.classList.remove("celebrate");
+        void fgCount.offsetWidth;
+        fgCount.classList.add("celebrate");
       }
       s.state = "idle";
     }
@@ -417,7 +781,7 @@ function simulateStep() {
       s.queue -= BATCH_SIZE;
       removeWipBatch(s.name);
       s.startBatch();
-      log(`Station ${s.name} started batch from WIP`);
+      log(`Station ${s.name} started batch from WIP`, "log-work");
     }
   }
 
@@ -427,24 +791,56 @@ function simulateStep() {
     setTimeout(simulateStep, TICK);
   } else {
     running = false;
-    log("Round complete");
+    log("Round complete!", "log-finish");
   }
 }
 
 function updateUI() {
-  timeLabel.textContent = "Time: " + time.toFixed(1) + "s";
-  finishedLabel.textContent = "Finished: " + finished;
+  timeLabel.textContent = time.toFixed(1) + "s";
+  finishedLabel.textContent = finished;
+  batchLabel.textContent = batchesComplete;
+  fgCount.textContent = finished;
+  roundProgressBar.style.width = Math.min(100, (time / ROUND_LENGTH) * 100) + "%";
 
-  const names = ["A", "B", "C", "D"];
   stations.forEach((s, idx) => {
-    let text = "";
-    if (s.state === "idle") text = "Idle";
-    if (s.state === "working") text = `Working (${s.timeRemaining.toFixed(1)}s)`;
-    if (s.state === "walking") text = `Walking (${s.timeRemaining.toFixed(1)}s)`;
-    statusEls[names[idx]].textContent = text;
+    const name = names[idx];
+    const badge = badgeEls[name];
+    const timer = timerEls[name];
+    const progress = progressEls[name];
+    const lane = laneEls[idx];
+
+    badge.className = "lane-badge";
+    progress.className = "work-progress-bar";
+    lane.classList.remove("active");
+    timer.className = "lane-timer";
+
+    if (s.state === "idle") {
+      badge.classList.add("badge-idle");
+      badge.textContent = "Idle";
+      timer.innerHTML = "&mdash;";
+      progress.style.width = "0%";
+    } else if (s.state === "working") {
+      badge.classList.add("badge-working");
+      badge.textContent = "Working";
+      timer.classList.add("active-timer");
+      timer.textContent = s.timeRemaining.toFixed(1) + "s";
+      lane.classList.add("active");
+      progress.classList.add("working");
+      progress.style.width = ((1 - s.timeRemaining / WORK_TIME) * 100) + "%";
+    } else if (s.state === "walking") {
+      badge.classList.add("badge-walking");
+      badge.textContent = "Walking";
+      timer.classList.add("walk-timer");
+      timer.textContent = s.timeRemaining.toFixed(1) + "s";
+      progress.classList.add("walking");
+      progress.style.width = ((1 - s.timeRemaining / WALK_TIME) * 100) + "%";
+    }
   });
 
-  statusEls.FG.textContent = finished > 0 ? "Output flowing" : "—";
+  badgeEls.FG.textContent = finished > 0 ? finished + " pennies" : "\u2014";
+  if (finished > 0) {
+    badgeEls.FG.className = "lane-badge badge-working";
+  }
 
   updateWalkingCountdowns();
 }
